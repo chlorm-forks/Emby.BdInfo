@@ -20,7 +20,6 @@
 #undef DEBUG
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -274,9 +273,7 @@ namespace BDInfo
                     }
                     if (streamFile == null)
                     {
-                        Debug.WriteLine(string.Format(
-                            "Playlist {0} referenced missing file {1}.",
-                            FileInfo.Name, streamFileName));
+                        // Error condition
                     }
 
                     TSStreamClipFile streamClipFile = null;

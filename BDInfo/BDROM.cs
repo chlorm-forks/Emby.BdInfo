@@ -20,8 +20,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace BDInfo
 {
@@ -45,11 +43,11 @@ namespace BDInfo
         public bool Is3D = false;
         public bool Is50Hz = false;
 
-        public Dictionary<string, TSPlaylistFile> PlaylistFiles = 
+        public Dictionary<string, TSPlaylistFile> PlaylistFiles =
             new Dictionary<string, TSPlaylistFile>();
         public Dictionary<string, TSStreamClipFile> StreamClipFiles =
             new Dictionary<string, TSStreamClipFile>();
-        public Dictionary<string, TSStreamFile> StreamFiles = 
+        public Dictionary<string, TSStreamFile> StreamFiles =
             new Dictionary<string, TSStreamFile>();
         public Dictionary<string, TSInterleavedFile> InterleavedFiles =
             new Dictionary<string, TSInterleavedFile>();
@@ -78,25 +76,25 @@ namespace BDInfo
             // Locate BDMV directories.
             //
 
-            DirectoryBDMV = 
+            DirectoryBDMV =
                 GetDirectoryBDMV(path);
-            
+
             if (DirectoryBDMV == null)
             {
                 throw new Exception("Unable to locate BD structure.");
             }
 
-            DirectoryRoot = 
+            DirectoryRoot =
                 DirectoryBDMV.Parent;
-            DirectoryBDJO = 
+            DirectoryBDJO =
                 GetDirectory("BDJO", DirectoryBDMV, 0);
-            DirectoryCLIPINF = 
+            DirectoryCLIPINF =
                 GetDirectory("CLIPINF", DirectoryBDMV, 0);
             DirectoryPLAYLIST =
                 GetDirectory("PLAYLIST", DirectoryBDMV, 0);
             DirectorySNP =
                 GetDirectory("SNP", DirectoryRoot, 0);
-            DirectorySTREAM = 
+            DirectorySTREAM =
                 GetDirectory("STREAM", DirectoryBDMV, 0);
             DirectorySSIF =
                 GetDirectory("SSIF", DirectorySTREAM, 0);
@@ -113,7 +111,7 @@ namespace BDInfo
 
             VolumeLabel = GetVolumeLabel(DirectoryRoot);
             Size = (ulong)GetDirectorySize(DirectoryRoot);
-            
+
             if (null != GetDirectory("BDSVM", DirectoryRoot, 0))
             {
                 IsBDPlus = true;
@@ -402,35 +400,7 @@ namespace BDInfo
 
         private string GetVolumeLabel(DirectoryInfo dir)
         {
-            uint serialNumber = 0;
-            uint maxLength = 0;
-            uint volumeFlags = new uint();
-            StringBuilder volumeLabel = new StringBuilder(256);
-            StringBuilder fileSystemName = new StringBuilder(256);
-            string label = "";
-
-            try
-            {
-                long result = GetVolumeInformation(
-                    dir.Name,
-                    volumeLabel,
-                    (uint)volumeLabel.Capacity,
-                    ref serialNumber,
-                    ref maxLength,
-                    ref volumeFlags,
-                    fileSystemName,
-                    (uint)fileSystemName.Capacity);
-
-                label = volumeLabel.ToString();
-            }
-            catch { }
-
-            if (label.Length == 0)
-            {
-                label = dir.Name;
-            }
-
-            return label;
+            return dir.Name;
         }
 
         public static int CompareStreamFiles(
@@ -468,15 +438,5 @@ namespace BDInfo
             }
         }
 
-        [DllImport("kernel32.dll")]
-        private static extern long GetVolumeInformation(
-            string PathName, 
-            StringBuilder VolumeNameBuffer, 
-            uint VolumeNameSize,
-            ref uint VolumeSerialNumber,
-            ref uint MaximumComponentLength,
-            ref uint FileSystemFlags, 
-            StringBuilder FileSystemNameBuffer,
-            uint FileSystemNameSize);
     }
 }
