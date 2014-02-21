@@ -39,7 +39,7 @@ namespace DvdLib.Ifo
                     _titleSetCount = vmgRead.ReadUInt16();
 
                     // read address of TT_SRPT
-                    vmgFs.Seek(0xC4, SeekOrigin.Begin); 
+                    vmgFs.Seek(0xC4, SeekOrigin.Begin);
                     uint ttSectorPtr = vmgRead.ReadUInt32();
                     vmgFs.Seek(ttSectorPtr * 2048, SeekOrigin.Begin);
                     ReadTT_SRPT(vmgRead);
@@ -66,13 +66,26 @@ namespace DvdLib.Ifo
 
         private void ReadVTS(ushort vtsNum)
         {
-            string vtsPath = Path.Combine(VideoTsPath, String.Format("VTS_{0:00}_0.IFO", vtsNum));
-            if (!File.Exists(vtsPath))
+            var allFiles = new DirectoryInfo(VideoTsPath).GetFiles("*", SearchOption.AllDirectories)
+                .ToList();
+
+            var ifo = allFiles
+                .Where(i => string.Equals(i.Extension, ".ifo", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(i => i.Length)
+                .FirstOrDefault();
+
+            if (ifo == null)
             {
-                Debug.WriteLine(String.Format("DvdLib Warning: {0} does not exist, trying BUP", vtsPath));
-                vtsPath = Path.ChangeExtension(vtsPath, ".BUP");
-                if (!File.Exists(vtsPath)) throw new FileNotFoundException("Unable to find VTS IFO file");
+                // Look for a bup if there are no ifo's
+                ifo = allFiles
+                    .Where(i => string.Equals(i.Extension, ".bup", StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(i => i.Length)
+                    .FirstOrDefault();
+
+                if (ifo == null) throw new FileNotFoundException("Unable to find VTS IFO file");
             }
+
+            string vtsPath = ifo.FullName;
 
             VTSPaths[vtsNum] = vtsPath;
 
