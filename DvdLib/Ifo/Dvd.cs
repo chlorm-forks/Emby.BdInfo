@@ -13,42 +13,51 @@ namespace DvdLib.Ifo
         public readonly List<Title> Titles;
 
         private ushort _titleCount;
-        public readonly string VideoTsPath;
         public readonly Dictionary<ushort, string> VTSPaths = new Dictionary<ushort, string>();
 
         public Dvd(string path)
         {
             Titles = new List<Title>();
+            var allFiles = new DirectoryInfo(path).GetFiles("*", SearchOption.AllDirectories).ToList();
 
-            VideoTsPath = Path.Combine(path, "VIDEO_TS");
-            if (!Directory.Exists(VideoTsPath)) throw new ArgumentException("VIDEO_TS folder not found in provided path", "path");
+            var vmgPath = allFiles.FirstOrDefault(i => string.Equals(i.Name, "VIDEO_TS.IFO", StringComparison.OrdinalIgnoreCase)) ??
+                allFiles.FirstOrDefault(i => string.Equals(i.Name, "VIDEO_TS.BUP", StringComparison.OrdinalIgnoreCase));
 
-            string vmgPath = Path.Combine(VideoTsPath, "VIDEO_TS.IFO");
-            if (!File.Exists(vmgPath))
+            if (vmgPath == null)
             {
-                Debug.WriteLine(String.Format("DvdLib Warning: {0} does not exist, trying BUP", vmgPath));
-                vmgPath = Path.ChangeExtension(vmgPath, ".BUP");
-                if (!File.Exists(vmgPath)) throw new FileNotFoundException("Unable to find a VMG IFO file");
-            }
+                var allIfos = allFiles.Where(i => string.Equals(i.Extension, ".ifo", StringComparison.OrdinalIgnoreCase));
 
-            using (FileStream vmgFs = File.Open(vmgPath, FileMode.Open, FileAccess.Read))
-            {
-                using (BigEndianBinaryReader vmgRead = new BigEndianBinaryReader(vmgFs))
+                foreach (var ifo in allIfos)
                 {
-                    vmgFs.Seek(0x3E, SeekOrigin.Begin);
-                    _titleSetCount = vmgRead.ReadUInt16();
-
-                    // read address of TT_SRPT
-                    vmgFs.Seek(0xC4, SeekOrigin.Begin);
-                    uint ttSectorPtr = vmgRead.ReadUInt32();
-                    vmgFs.Seek(ttSectorPtr * 2048, SeekOrigin.Begin);
-                    ReadTT_SRPT(vmgRead);
+                    var num = ifo.Name.Split('_').ElementAtOrDefault(1);
+                    int ifoNumber;
+                    if (!string.IsNullOrEmpty(num) && int.TryParse(num, out ifoNumber))
+                    {
+                        ReadVTS(Convert.ToUInt16(ifoNumber), ifo.FullName);
+                    }
                 }
             }
-
-            for (ushort titleSetNum = 1; titleSetNum <= _titleSetCount; titleSetNum++)
+            else
             {
-                ReadVTS(titleSetNum);
+                using (FileStream vmgFs = File.Open(vmgPath.FullName, FileMode.Open, FileAccess.Read))
+                {
+                    using (BigEndianBinaryReader vmgRead = new BigEndianBinaryReader(vmgFs))
+                    {
+                        vmgFs.Seek(0x3E, SeekOrigin.Begin);
+                        _titleSetCount = vmgRead.ReadUInt16();
+
+                        // read address of TT_SRPT
+                        vmgFs.Seek(0xC4, SeekOrigin.Begin);
+                        uint ttSectorPtr = vmgRead.ReadUInt32();
+                        vmgFs.Seek(ttSectorPtr * 2048, SeekOrigin.Begin);
+                        ReadTT_SRPT(vmgRead);
+                    }
+                }
+
+                for (ushort titleSetNum = 1; titleSetNum <= _titleSetCount; titleSetNum++)
+                {
+                    ReadVTS(titleSetNum, allFiles);
+                }
             }
         }
 
@@ -64,29 +73,23 @@ namespace DvdLib.Ifo
             }
         }
 
-        private void ReadVTS(ushort vtsNum)
+        private void ReadVTS(ushort vtsNum, List<FileInfo> allFiles)
         {
-            var allFiles = new DirectoryInfo(VideoTsPath).GetFiles("*", SearchOption.AllDirectories)
-                .ToList();
+            var filename = String.Format("VTS_{0:00}_0.IFO", vtsNum);
 
-            var ifo = allFiles
-                .Where(i => string.Equals(i.Extension, ".ifo", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(i => i.Length)
-                .FirstOrDefault();
+            var vtsPath = allFiles.FirstOrDefault(i => string.Equals(i.Name, filename, StringComparison.OrdinalIgnoreCase)) ??
+                allFiles.FirstOrDefault(i => string.Equals(i.Name, Path.ChangeExtension(filename, ".bup"), StringComparison.OrdinalIgnoreCase));
 
-            if (ifo == null)
+            if (vtsPath == null)
             {
-                // Look for a bup if there are no ifo's
-                ifo = allFiles
-                    .Where(i => string.Equals(i.Extension, ".bup", StringComparison.OrdinalIgnoreCase))
-                    .OrderByDescending(i => i.Length)
-                    .FirstOrDefault();
-
-                if (ifo == null) throw new FileNotFoundException("Unable to find VTS IFO file");
+                throw new FileNotFoundException("Unable to find VTS IFO file");
             }
 
-            string vtsPath = ifo.FullName;
+            ReadVTS(vtsNum, vtsPath.FullName);
+        }
 
+        private void ReadVTS(ushort vtsNum, string vtsPath)
+        {
             VTSPaths[vtsNum] = vtsPath;
 
             using (FileStream vtsFs = File.Open(vtsPath, FileMode.Open, FileAccess.Read))
