@@ -239,8 +239,8 @@ namespace BDInfo
             }
             finally
             {
-                if (fileReader != null) fileReader.Close();
-                if (fileStream != null) fileStream.Close();
+                if (fileReader != null) fileReader.Dispose();
+                if (fileStream != null) fileStream.Dispose();
             }
         }
     }

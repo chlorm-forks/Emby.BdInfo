@@ -478,11 +478,11 @@ namespace BDInfo
             {
                 if (fileReader != null)
                 {
-                    fileReader.Close();
+                    fileReader.Dispose();
                 }
                 if (fileStream != null)
                 {
-                    fileStream.Close();
+                    fileStream.Dispose();
                 }
             }
         }

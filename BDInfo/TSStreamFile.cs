@@ -864,7 +864,7 @@ namespace BDInfo
                                         catch (Exception ex)
                                         {
                                             // TODO
-                                            Console.WriteLine(ex.Message);
+                                            //Console.WriteLine(ex.Message);
                                         }
                                     }
                                 }
@@ -1472,7 +1472,7 @@ namespace BDInfo
             {
                 if (fileStream != null)
                 {
-                    fileStream.Close();
+                    fileStream.Dispose();
                 }
             }
         }
